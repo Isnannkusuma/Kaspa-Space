@@ -20,7 +20,6 @@
 /storage/pail
 /vendor
 .vite/
-
 Homestead.json
 Homestead.yaml
 Thumbs.db

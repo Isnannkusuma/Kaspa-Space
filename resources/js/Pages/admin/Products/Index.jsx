@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '../AdminLayout';
+import AdminLayout from '../LandingAdmin';
 import {
   PlusIcon,
   EyeIcon,

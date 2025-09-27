@@ -5,22 +5,18 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Admin\ScheduleController;
-use App\Models\GoogleSheetsConfig;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Models\GoogleSheetsConfig;
 
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return Inertia::render('LandingPage');
-});
-
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::get('/workspace-section', function () {
@@ -35,43 +31,10 @@ Route::get('/food-beverage', function () {
     return Inertia::render('FoodBeverage');
 })->name('food.beverage');
 
-Route::get('/ScheduleManagement', function () {
-    return Inertia::render('admin/ScheduleManagement');
-})->name('schedule.management');
-
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-    // Dashboard schedule page
-    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
-    
-    // Upload schedule data
-    Route::post('/schedule/upload', [ScheduleController::class, 'upload'])->name('schedule.upload');
-    
-    // Clear all schedules
-    Route::delete('/schedule/clear', [ScheduleController::class, 'clear'])->name('schedule.clear');
-    
-    // View current data
-    Route::get('/schedule/view', [ScheduleController::class, 'view'])->name('schedule.view');
-});
-
-Route::get('/api/schedule-data', [ScheduleController::class, 'getPublicData']);
-
-// Google API
-Route::middleware(['auth'])->prefix('admin')->group(function () {
-    Route::get('/google-sheets-config', function() {
-        return Inertia::render('admin/GoogleSheetsConfig', [
-            'currentConfig' => GoogleSheetsConfig::first(),
-        ]);
-    })->name('admin.google-sheets');
-    
-    // API routes untuk test dan save
-    Route::post('/google-sheets/test', [GoogleSheetsController::class, 'test']);
-    Route::post('/google-sheets/store', [GoogleSheetsController::class, 'store']);
-});
-
-// Public routes
+// Public Schedule Routes
 Route::get('/jadwal-ruangan', function() {
     return Inertia::render('Schedule/Index', [
-        'initialData' => Schedule::all(),
+        'initialData' => \App\Models\Schedule::all(),
         'googleSheetsConfig' => GoogleSheetsConfig::where('is_active', true)->first(),
     ]);
 })->name('schedule.index');
@@ -79,30 +42,54 @@ Route::get('/jadwal-ruangan', function() {
 // API untuk real-time data
 Route::get('/api/schedule-data', [ScheduleController::class, 'getPublicData']);
 
-
-
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Auth Routes
 |--------------------------------------------------------------------------
 */
 
-Route::get('/adminlogin', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Admin Routes - Protected by authentication
+/*
+|--------------------------------------------------------------------------
+| Admin Routes
+|--------------------------------------------------------------------------
+*/
+Route::get('/admin/test', function () {
+    return response()->json(['message' => 'Admin route works']);
+})->name('admin.test');
+
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     
     // Dashboard
-    Route::get('/adminlogin', function () {
-        return Inertia::render('Admin/Dashboard');
-    })->name('dashboard');
+    Route::get('/adminlayout', function () {
+        return Inertia::render('Admin/LandingAdmin');
+    })->name('LandingAdmin');
+
+    // Schedule Management Routes
+    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
+    Route::post('/schedule/upload', [ScheduleController::class, 'upload'])->name('schedule.upload');
+    Route::delete('/schedule/clear', [ScheduleController::class, 'clear'])->name('schedule.clear');
+    Route::get('/schedule/view', [ScheduleController::class, 'view'])->name('schedule.view');
+
+    // Google Sheets Configuration
+    Route::get('/google-sheets-config', function() {
+        return Inertia::render('Admin/GoogleSheetsConfig', [
+            'currentConfig' => GoogleSheetsConfig::first(),
+        ]);
+    })->name('google-sheets');
+    
+    // Google Sheets API routes (uncomment when controller is created)
+    // Route::post('/google-sheets/test', [GoogleSheetsController::class, 'test']);
+    // Route::post('/google-sheets/store', [GoogleSheetsController::class, 'store']);
 
     // Categories Management
     Route::resource('categories', CategoryController::class);
@@ -112,39 +99,57 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
     Route::patch('products/{product}/status', [ProductController::class, 'updateStatus'])->name('products.update-status');
+    Route::patch('products/{product}/featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
     Route::delete('products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     
     // Product Image Management
     Route::post('products/upload-image', [ProductController::class, 'uploadImage'])->name('products.upload-image');
     Route::delete('products/delete-image', [ProductController::class, 'deleteImage'])->name('products.delete-image');
+    
+    // Product Export/Import
+    Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
 
-    // Settings
+    // Other Admin Pages
     Route::get('settings', function () {
         return Inertia::render('Admin/Settings');
     })->name('settings');
 
-    // Statistics
     Route::get('statistics', function () {
         return Inertia::render('Admin/Statistics');
     })->name('statistics');
 
-    // Reservations (if needed)
     Route::get('reservations', function () {
         return Inertia::render('Admin/Reservations');
     })->name('reservations');
 
-    // Discounts (if needed)
     Route::get('discounts', function () {
         return Inertia::render('Admin/Discounts');
     })->name('discounts');
 
-    // Integrations (if needed)
     Route::get('integrations', function () {
         return Inertia::render('Admin/Integrations');
     })->name('integrations');
 });
 
-// Public Frontend Routes
+/*
+|--------------------------------------------------------------------------
+| Schedule Management Route (Legacy)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/ScheduleManagement', function () {
+    return Inertia::render('Admin/ScheduleManagement');
+})->name('schedule.management');
+
+/*
+|--------------------------------------------------------------------------
+| Public Frontend Routes (E-commerce)
+|--------------------------------------------------------------------------
+| Uncomment when controllers are created
+*/
+
+
 Route::middleware(['web'])->group(function () {
     // Product catalog
     Route::get('/products', [\App\Http\Controllers\ProductController::class, 'index'])->name('products.index');
@@ -156,5 +161,21 @@ Route::middleware(['web'])->group(function () {
     Route::get('/cart', [\App\Http\Controllers\CartController::class, 'index'])->name('cart.index');
     Route::post('/checkout', [\App\Http\Controllers\CheckoutController::class, 'process'])->name('checkout.process');
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Login Page Route
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/adminlogin', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+})->name('admin.login.page');
 
 require __DIR__.'/auth.php';

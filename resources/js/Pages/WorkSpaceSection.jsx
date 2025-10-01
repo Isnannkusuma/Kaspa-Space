@@ -3,115 +3,18 @@ import { Search, Star, MapPin, Clock } from "lucide-react";
 import Navbar from "@/Components/Navbar";
 import GoogleSheetsScheduleSection from "./SectionWorkSpace/GoogleSheetsScheduleSection";
 
-const WorkspaceSection = () => {
+const WorkspaceSection = ({ products = [] }) => {
     const [searchTerm, setSearchTerm] = useState("");
+    console.log('Products received:', products);
+    console.log('Products received:', products);
+    console.log('Products type:', typeof products);
+    console.log('Products is array:', Array.isArray(products));
+    console.log('Products length:', products?.length);
 
-    // Sample data - dalam implementasi nyata, ini akan dari props atau API
-    const products = [
-        {
-            id: 1,
-            name: "Coworking Space Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 4,
-            reviewCount: 19,
-            price: "Rp10000.00",
-            location: "Solo",
-        },
-        {
-            id: 2,
-            name: "Coworking Space Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 4,
-            reviewCount: 19,
-            price: "Rp10000.00",
-            location: "Solo",
-        },
-        {
-            id: 3,
-            name: "Coworking Space Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 4,
-            reviewCount: 19,
-            price: "Rp10000.00",
-            location: "Solo",
-        },
-        {
-            id: 4,
-            name: "Coworking Space Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 4,
-            reviewCount: 19,
-            price: "Rp10000.00",
-            location: "Solo",
-        },
-        {
-            id: 5,
-            name: "Coworking Space Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 4,
-            reviewCount: 19,
-            price: "Rp10000.00",
-            location: "Solo",
-        },
-        {
-            id: 6,
-            name: "Signage Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 5,
-            reviewCount: 0,
-            price: "Rp1625000.00",
-            location: "Solo",
-        },
-        {
-            id: 7,
-            name: "Signage Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 5,
-            reviewCount: 0,
-            price: "Rp1625000.00",
-            location: "Solo",
-        },
-        {
-            id: 8,
-            name: "Signage Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 5,
-            reviewCount: 0,
-            price: "Rp1625000.00",
-            location: "Solo",
-        },
-        {
-            id: 9,
-            name: "Signage Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 5,
-            reviewCount: 0,
-            price: "Rp1625000.00",
-            location: "Solo",
-        },
-        {
-            id: 10,
-            name: "Signage Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 5,
-            reviewCount: 0,
-            price: "Rp1625000.00",
-            location: "Solo",
-        },
-        {
-            id: 11,
-            name: "Signage Solo Kaspa Space",
-            image: "/api/placeholder/300/200",
-            rating: 5,
-            reviewCount: 0,
-            price: "Rp1625000.00",
-            location: "Solo",
-        },
-    ];
 
     const filteredProducts = products.filter((product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase())
+);
 
     const renderStars = (rating, reviewCount) => {
         return (
@@ -231,18 +134,16 @@ const WorkspaceSection = () => {
                             >
                                 {/* Product Image */}
                                 <div className="relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-gradient-to-t from-blue-900/20 to-transparent z-10"></div>
                                     <img
-                                        src={product.image}
-                                        alt={product.name}
+                                        src={
+                                            product.images &&
+                                            product.images.length > 0
+                                                ? `/storage/${product.images[0]}`
+                                                : "/images/placeholder.png"
+                                        }
+                                        alt={product.title}
                                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                                     />
-                                    {/* Label placeholder - akan diatur dari dashboard */}
-                                    {/* <div className="absolute top-3 left-3 z-20">
-                  <span className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
-                    Label
-                  </span>
-                </div> */}
 
                                     {/* Decorative corner */}
                                     <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-200/30 to-transparent"></div>
@@ -251,28 +152,8 @@ const WorkspaceSection = () => {
                                 {/* Product Info */}
                                 <div className="p-5">
                                     <h3 className="font-semibold text-slate-800 mb-3 line-clamp-2 text-base leading-tight">
-                                        {product.name}
+                                        {product.title}
                                     </h3>
-
-                                    {/* Rating */}
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <div className="flex items-center gap-1">
-                                            {[...Array(5)].map((_, index) => (
-                                                <Star
-                                                    key={index}
-                                                    size={14}
-                                                    className={`${
-                                                        index < product.rating
-                                                            ? "fill-blue-400 text-blue-400"
-                                                            : "text-blue-200"
-                                                    }`}
-                                                />
-                                            ))}
-                                        </div>
-                                        <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium">
-                                            ({product.reviewCount}) review
-                                        </span>
-                                    </div>
 
                                     {/* Price */}
                                     <div className="mb-4">
@@ -280,7 +161,7 @@ const WorkspaceSection = () => {
                                             Mulai dari
                                         </div>
                                         <span className="text-lg font-bold text-blue-900 bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">
-                                            {product.price}
+                                            Rp{Number(product.base_price).toLocaleString()}
                                         </span>
                                     </div>
 
@@ -316,10 +197,7 @@ const WorkspaceSection = () => {
                         <div className="text-center py-16">
                             <div className="max-w-md mx-auto">
                                 <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <Search
-                                        size={32}
-                                        className="text-blue-500"
-                                    />
+                                    <Search size={32} className="text-blue-500" />
                                 </div>
                                 <h3 className="text-xl font-semibold text-slate-800 mb-3">
                                     Tidak ada produk yang ditemukan

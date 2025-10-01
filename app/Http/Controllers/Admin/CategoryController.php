@@ -34,6 +34,10 @@ class CategoryController extends Controller
             'sort_order' => 'integer|min:0',
         ]);
 
+        if (empty($validated['slug'])) {
+            $validated['slug'] = \Str::slug($validated['name']);
+        }
+
         Category::create($validated);
 
         return redirect()->route('admin.categories.index')

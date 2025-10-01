@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Models\GoogleSheetsConfig;
+use App\Models\Product;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,7 +21,26 @@ Route::get('/', function () {
 });
 
 Route::get('/workspace-section', function () {
-    return Inertia::render('WorkSpaceSection');
+    $products = Product::where('is_active', 1)
+        ->orderBy('sort_order')
+        ->get()
+        ->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'title' => $product->title,
+                'slug' => $product->slug,
+                'subtitle' => $product->subtitle,
+                'description' => $product->description,
+                'promo_label' => $product->promo_label,
+                'base_price' => (string) $product->base_price,
+                'images' => is_array($product->images) ? $product->images : [],
+                'is_featured' => $product->is_featured,
+            ];
+        })->values()->toArray();
+    
+    return Inertia::render('WorkSpaceSection', [
+        'products' => $products
+    ]);
 })->name('workspace.section');
 
 Route::get('/jasa-profesional-section', function () {

@@ -18,6 +18,9 @@ const ProductCreate = ({ categories, allProducts }) => {
     category_id: '',
     is_active: true,
     is_featured: false,
+    sort_order: 0,
+    meta_description: '',
+    meta_keywords: '',
     images: [],
     custom_options: [],
     variants: [],
@@ -28,6 +31,8 @@ const ProductCreate = ({ categories, allProducts }) => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    
+    // Add to existing images
     setData('images', [...data.images, ...files]);
     
     // Create preview URLs
@@ -50,7 +55,7 @@ const ProductCreate = ({ categories, allProducts }) => {
   const addCustomOption = () => {
     setData('custom_options', [...data.custom_options, {
       question: '',
-      type: 'checkbox',
+      type: 'text',
       options: [],
       required: false
     }]);
@@ -74,6 +79,7 @@ const ProductCreate = ({ categories, allProducts }) => {
       compare_price: '',
       stock_quantity: 0,
       manage_stock: false,
+      sku: '',
       attributes: {}
     }]);
   };
@@ -91,7 +97,72 @@ const ProductCreate = ({ categories, allProducts }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post(route('admin.products.store'));
+    
+    // Create FormData for file uploads
+    const formData = new FormData();
+    
+    // Add basic fields
+    formData.append('title', data.title);
+    formData.append('subtitle', data.subtitle || '');
+    formData.append('description', data.description || '');
+    formData.append('promo_label', data.promo_label || '');
+    formData.append('base_price', data.base_price);
+    formData.append('category_id', data.category_id);
+    formData.append('is_active', data.is_active ? '1' : '0');
+    formData.append('is_featured', data.is_featured ? '1' : '0');
+    formData.append('sort_order', data.sort_order || '0');
+    formData.append('meta_description', data.meta_description || '');
+    formData.append('meta_keywords', data.meta_keywords || '');
+    
+    // Add images
+    data.images.forEach((image, index) => {
+      if (image instanceof File) {
+        formData.append(`images[${index}]`, image);
+      }
+    });
+    
+    // Add custom options
+    data.custom_options.forEach((option, index) => {
+      formData.append(`custom_options[${index}][question]`, option.question);
+      formData.append(`custom_options[${index}][type]`, option.type);
+      formData.append(`custom_options[${index}][required]`, option.required ? '1' : '0');
+      if (option.options && option.options.length > 0) {
+        option.options.forEach((opt, optIndex) => {
+          formData.append(`custom_options[${index}][options][${optIndex}]`, opt);
+        });
+      }
+    });
+    
+    // Add variants
+    data.variants.forEach((variant, index) => {
+      formData.append(`variants[${index}][name]`, variant.name);
+      formData.append(`variants[${index}][price]`, variant.price);
+      formData.append(`variants[${index}][compare_price]`, variant.compare_price || '');
+      formData.append(`variants[${index}][stock_quantity]`, variant.stock_quantity || '0');
+      formData.append(`variants[${index}][manage_stock]`, variant.manage_stock ? '1' : '0');
+      formData.append(`variants[${index}][sku]`, variant.sku || '');
+    });
+    
+    // Add recommendations
+    data.recommendations.forEach((rec, index) => {
+      formData.append(`recommendations[${index}]`, rec);
+    });
+
+    console.log('Submitting form data:', data);
+    
+    // Try different route names based on your setup
+    const routeName = route().has('admin.products.store') ? 'admin.products.store' : 'products.store';
+    
+    post(route(routeName), {
+      data: formData,
+      forceFormData: true,
+      onSuccess: () => {
+        console.log('Product created successfully');
+      },
+      onError: (errors) => {
+        console.error('Validation errors:', errors);
+      }
+    });
   };
 
   return (
@@ -108,20 +179,26 @@ const ProductCreate = ({ categories, allProducts }) => {
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-gray-900">Edit layanan</h1>
-          </div>
-          <div className="flex items-center space-x-3">
-            <select className="block text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-              <option>Ditampilkan</option>
-              <option>Disembunyikan</option>
-            </select>
+            <h1 className="text-2xl font-semibold text-gray-900">Tambah Produk</h1>
           </div>
         </div>
+
+        {/* Show validation errors */}
+        {Object.keys(errors).length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <h3 className="text-sm font-medium text-red-800 mb-2">Terjadi kesalahan:</h3>
+            <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
+              {Object.keys(errors).map(key => (
+                <li key={key}>{errors[key]}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Product Images */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Produk</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Gambar Produk</h2>
             
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
               {imagePreview.map((preview, index) => (
@@ -145,7 +222,7 @@ const ProductCreate = ({ categories, allProducts }) => {
               {imagePreview.length < 6 && (
                 <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors">
                   <PhotoIcon className="h-8 w-8 text-gray-400" />
-                  <span className="mt-2 text-sm text-gray-500">Tambahkan Media</span>
+                  <span className="mt-2 text-sm text-gray-500">Tambah Gambar</span>
                   <input
                     type="file"
                     multiple
@@ -156,15 +233,6 @@ const ProductCreate = ({ categories, allProducts }) => {
                 </label>
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={() => document.querySelector('input[type="file"]')?.click()}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors"
-            >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Buat detail produk
-            </button>
           </div>
 
           {/* Product Details */}
@@ -178,8 +246,9 @@ const ProductCreate = ({ categories, allProducts }) => {
                 type="text"
                 value={data.title}
                 onChange={(e) => setData('title', e.target.value)}
-                placeholder="Virtual Office - Kaspa Space Sinarmas Surabaya"
+                placeholder="Nama produk"
                 className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                required
               />
               {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
             </div>
@@ -191,7 +260,7 @@ const ProductCreate = ({ categories, allProducts }) => {
                 type="text"
                 value={data.subtitle}
                 onChange={(e) => setData('subtitle', e.target.value)}
-                placeholder="Virtual Office untuk Startup dan UMKM Indonesia maju"
+                placeholder="Subjudul produk"
                 className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -203,7 +272,7 @@ const ProductCreate = ({ categories, allProducts }) => {
                 type="text"
                 value={data.promo_label}
                 onChange={(e) => setData('promo_label', e.target.value)}
-                placeholder="NEW"
+                placeholder="NEW, SALE, dll"
                 className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -211,24 +280,74 @@ const ProductCreate = ({ categories, allProducts }) => {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-              <div className="border border-gray-300 rounded-md">
-                <div className="px-3 py-2 border-b border-gray-300 bg-gray-50">
-                  <div className="flex items-center space-x-2">
-                    <button type="button" className="text-indigo-600 text-sm font-medium">AI Writer</button>
-                    <span className="text-gray-400">|</span>
-                    <button type="button" className="p-1 text-gray-400 hover:text-gray-600">H2</button>
-                    <button type="button" className="p-1 text-gray-400 hover:text-gray-600">H3</button>
-                    <button type="button" className="p-1 text-gray-400 hover:text-gray-600 font-bold">B</button>
-                    <button type="button" className="p-1 text-gray-400 hover:text-gray-600 italic">I</button>
-                  </div>
-                </div>
-                <textarea
-                  value={data.description}
-                  onChange={(e) => setData('description', e.target.value)}
-                  placeholder="Apa itu Virtual Office?"
-                  rows={8}
-                  className="block w-full border-0 resize-none focus:ring-0"
+              <textarea
+                value={data.description}
+                onChange={(e) => setData('description', e.target.value)}
+                placeholder="Deskripsi produk"
+                rows={6}
+                className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Base Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Harga Dasar <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={data.base_price}
+                onChange={(e) => setData('base_price', e.target.value)}
+                placeholder="100000"
+                min="0"
+                step="0.01"
+                className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+              {errors.base_price && <p className="mt-1 text-sm text-red-600">{errors.base_price}</p>}
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kategori <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={data.category_id}
+                onChange={(e) => setData('category_id', e.target.value)}
+                className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                <option value="">Pilih Kategori</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {errors.category_id && <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>}
+            </div>
+
+            {/* Status toggles */}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={data.is_active}
+                  onChange={(e) => setData('is_active', e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
+                <label className="ml-2 text-sm text-gray-700">Aktif</label>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={data.is_featured}
+                  onChange={(e) => setData('is_featured', e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 text-sm text-gray-700">Unggulan</label>
               </div>
             </div>
           </div>
@@ -236,39 +355,18 @@ const ProductCreate = ({ categories, allProducts }) => {
           {/* Product Variants */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Variasi produk</h3>
+              <h3 className="text-lg font-medium text-gray-900">Variasi Produk</h3>
               <button
                 type="button"
                 onClick={addVariant}
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
-                Tambahkan variasi produk
+                Tambah Variasi
               </button>
             </div>
-            
-            <p className="text-sm text-gray-500 mb-6">
-              Kelola opsi produk seperti ukuran, warna, atau berat. Setiap varian dibuat dan bisa diatur satu per satu.
-            </p>
 
             <div className="space-y-4">
-              {/* Package Options */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Paket</label>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {['Bronze 12 Bulan', 'Platinum 12 Bulan', 'Gold 12 Bulan', 'PT/CV Bronze 12 Bulan', 'PT/CV Platinum 12 Bulan', 'PT/CV Gold 12 Bulan', 'Bronze 12 Bulan + PT Perorangan', 'Bronze 12 Bulan + PT Umum', 'Bronze 12 Bulan + CV', 'Platinum 12 Bulan + PT Perorangan PKP', 'Platinum 12 Bulan + PT Umum PKP', 'Platinum 12 Bulan + CV PKP'].map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Variant List */}
               {data.variants.map((variant, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -289,37 +387,35 @@ const ProductCreate = ({ categories, allProducts }) => {
                         type="text"
                         value={variant.name}
                         onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                        placeholder="Bronze 12 Bulan + PT Perorangan"
+                        placeholder="Contoh: Ukuran L"
                         className="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
                     
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Harga</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">Rp</span>
-                        <input
-                          type="number"
-                          value={variant.price}
-                          onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                          placeholder="395000"
-                          className="block w-full pl-8 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        value={variant.price}
+                        onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                        placeholder="100000"
+                        min="0"
+                        step="0.01"
+                        className="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                      />
                     </div>
                     
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Harga Asal</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">Rp</span>
-                        <input
-                          type="number"
-                          value={variant.compare_price}
-                          onChange={(e) => updateVariant(index, 'compare_price', e.target.value)}
-                          placeholder="450000"
-                          className="block w-full pl-8 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        value={variant.compare_price}
+                        onChange={(e) => updateVariant(index, 'compare_price', e.target.value)}
+                        placeholder="120000"
+                        min="0"
+                        step="0.01"
+                        className="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                      />
                     </div>
                     
                     <div>
@@ -328,7 +424,7 @@ const ProductCreate = ({ categories, allProducts }) => {
                         type="text"
                         value={variant.sku || ''}
                         onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-                        placeholder="62638202"
+                        placeholder="SKU123"
                         className="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -340,10 +436,17 @@ const ProductCreate = ({ categories, allProducts }) => {
 
           {/* Custom Options */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Info kustom</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Pelanggan bisa menambahkan teks untuk mempersonalisasi produk.
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Opsi Kustom</h3>
+              <button
+                type="button"
+                onClick={addCustomOption}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Tambah Opsi
+              </button>
+            </div>
 
             <div className="space-y-4">
               {data.custom_options.map((option, index) => (
@@ -366,9 +469,23 @@ const ProductCreate = ({ categories, allProducts }) => {
                         type="text"
                         value={option.question}
                         onChange={(e) => updateCustomOption(index, 'question', e.target.value)}
-                        placeholder="Tidak sekalian: Kasper AI, coworking lainnya, legalitas usaha, atau Microsoft key? 😊"
+                        placeholder="Pertanyaan untuk customer"
                         className="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                       />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Tipe Input</label>
+                      <select
+                        value={option.type}
+                        onChange={(e) => updateCustomOption(index, 'type', e.target.value)}
+                        className="block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="text">Text</option>
+                        <option value="checkbox">Checkbox</option>
+                        <option value="radio">Radio</option>
+                        <option value="select">Select</option>
+                      </select>
                     </div>
                     
                     <div className="flex items-center">
@@ -378,93 +495,11 @@ const ProductCreate = ({ categories, allProducts }) => {
                         onChange={(e) => updateCustomOption(index, 'required', e.target.checked)}
                         className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
-                      <label className="ml-2 text-sm text-gray-700">Wajib</label>
+                      <label className="ml-2 text-sm text-gray-700">Wajib diisi</label>
                     </div>
                   </div>
                 </div>
               ))}
-              
-              <button
-                type="button"
-                onClick={addCustomOption}
-                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
-              >
-                <PlusIcon className="h-5 w-5 mx-auto mb-1" />
-                Tambah Pertanyaan Kustom
-              </button>
-            </div>
-          </div>
-
-          {/* Category and Settings */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Kategori</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Buat kategori produk agar pelanggan mudah menemukan barang.
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <select
-                  value={data.category_id}
-                  onChange={(e) => setData('category_id', e.target.value)}
-                  className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Pilih Kategori</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.category_id && <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>}
-              </div>
-
-              {/* Product Recommendations */}
-              <div>
-                <h4 className="text-base font-medium text-gray-900 mb-2">Produk terkait</h4>
-                <p className="text-sm text-gray-500 mb-3">
-                  Tingkatkan penjualan dengan menampilkan produk terkait di halaman ini, seperti "Rekomendasi untuk Anda", "Cocok Dipadukan dengan", atau "Produk Serupa".
-                </p>
-                
-                <div className="flex items-center mb-4">
-                  <input
-                    type="checkbox"
-                    checked={data.recommendations.length > 0}
-                    onChange={(e) => {
-                      if (!e.target.checked) {
-                        setData('recommendations', []);
-                      }
-                    }}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm font-medium text-gray-700">Tampilkan produk terkait</label>
-                </div>
-
-                {data.recommendations.length > 0 || allProducts.length > 0 ? (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Judul bagian</label>
-                      <input
-                        type="text"
-                        defaultValue="Rekomendasi untuk Anda"
-                        className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                      <select className="block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                        <option>Co-working Space</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </div>
           </div>
 
@@ -482,7 +517,7 @@ const ProductCreate = ({ categories, allProducts }) => {
               disabled={processing}
               className="px-6 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
             >
-              {processing ? 'Menyimpan...' : 'Simpan'}
+              {processing ? 'Menyimpan...' : 'Simpan Produk'}
             </button>
           </div>
         </form>

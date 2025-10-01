@@ -28,7 +28,7 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'images' => 'json',
+        'images' => 'array',
         'custom_options' => 'json',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',

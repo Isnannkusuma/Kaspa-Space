@@ -19,7 +19,7 @@ class Product extends Model
         'base_price',
         'images',
         'custom_options',
-        'is_active',
+        'is_active',    
         'is_featured',
         'sort_order',
         'meta_description',
@@ -65,6 +65,12 @@ class Product extends Model
     public function activeVariants()
     {
         return $this->hasMany(ProductVariant::class)->where('is_active', true)->orderBy('sort_order');
+    }
+
+    public function orderItems()
+    
+    {
+    return $this->hasMany(OrderItem::class);
     }
 
     public function recommendations()

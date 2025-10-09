@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\CartController;
 use App\Models\GoogleSheetsConfig;
 use App\Models\Product;
 
@@ -21,7 +22,8 @@ Route::get('/', function () {
 });
 
 Route::get('/workspace-section', function () {
-    $products = Product::where('is_active', 1)
+    $products = Product::with(['category', 'variants']) // PENTING: Load variants
+        ->where('is_active', 1)
         ->orderBy('sort_order')
         ->get()
         ->map(function ($product) {
@@ -35,14 +37,54 @@ Route::get('/workspace-section', function () {
                 'base_price' => (string) $product->base_price,
                 'images' => is_array($product->images) ? $product->images : [],
                 'is_featured' => $product->is_featured,
+                'category' => $product->category ? [
+                    'id' => $product->category->id,
+                    'name' => $product->category->name,
+                    'slug' => $product->category->slug,
+                ] : null,
+                // TAMBAHKAN INI - Variants
+                'variants' => $product->variants->map(function ($variant) {
+                    return [
+                        'id' => $variant->id,
+                        'name' => $variant->name,
+                        'description' => $variant->description ?? null,
+                        'sku' => $variant->sku,
+                        'price' => (float) $variant->price,
+                        'compare_price' => $variant->compare_price ? (float) $variant->compare_price : null,
+                        'is_active' => (bool) $variant->is_active,
+                        'manage_stock' => (bool) $variant->manage_stock,
+                        'stock_quantity' => (int) $variant->stock_quantity,
+                        'sort_order' => (int) $variant->sort_order,
+                        'attributes' => $variant->attributes,
+                        'image' => $variant->image,
+                    ];
+                })->toArray(),
+                // TAMBAHKAN INI - Custom Options
+                'custom_options' => is_array($product->custom_options) 
+                    ? array_map(function($option) {
+                        return [
+                            'name' => $option['question'] ?? $option['name'] ?? '',
+                            'label' => $option['question'] ?? $option['label'] ?? $option['name'] ?? '',
+                            'type' => $option['type'] ?? 'text',
+                            'required' => $option['required'] ?? false,
+                            'placeholder' => $option['placeholder'] ?? null,
+                            'options' => $option['options'] ?? null,
+                        ];
+                    }, $product->custom_options)
+                    : [],
             ];
         })->values()->toArray();
     
     return Inertia::render('WorkSpaceSection', [
         'products' => $products
     ]);
-})->name('workspace.section');
 
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/update-quantity', [CartController::class, 'updateQuantity'])->name('cart.updateQuantity');
+
+})->name('workspace.section');
 Route::get('/jasa-profesional-section', function () {
     return Inertia::render('JasaProfesionalSection');
 })->name('jasa.profesional.section');
@@ -197,5 +239,46 @@ Route::get('/adminlogin', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 })->name('admin.login.page');
+
+
+// checkout
+
+// Cart routes
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::delete('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::patch('/cart/quantity', [CartController::class, 'updateQuantity'])->name('cart.quantity');
+
+// Checkout routes
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/order/success/{order}', [CheckoutController::class, 'success'])->name('order.success');
+
+// Admin routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
+});
+
+Route::get('/test-product/{slug}', function ($slug) {
+    $product = \App\Models\Product::with(['variants'])
+        ->where('slug', $slug)
+        ->firstOrFail();
+    
+    return response()->json([
+        'id' => $product->id,
+        'title' => $product->title,
+        'variants_loaded' => $product->relationLoaded('variants'),
+        'variants_count' => $product->variants->count(),
+        'variants' => $product->variants->toArray(),
+        'custom_options_type' => gettype($product->custom_options),
+        'custom_options' => $product->custom_options,
+        'images_type' => gettype($product->images),
+        'images' => $product->images,
+    ]);
+});
+
+Route::get('/workspace/{category?}', [WorkspaceController::class, 'index'])->name('workspace');
 
 require __DIR__.'/auth.php';

@@ -1,34 +1,57 @@
 import React, { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { Search, ShoppingCart } from "lucide-react";
+import { Link, usePage } from "@inertiajs/react";
 import Navbar from "@/Components/Navbar";
+import ProductModal from "@/Components/ProductModal";
 import GoogleSheetsScheduleSection from "./SectionWorkSpace/GoogleSheetsScheduleSection";
 
-const WorkspaceSection = ({ products = [] }) => {
+const WorkspaceSection = ({ products = [], currentCategory, categories = [] }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { props } = usePage();
+    const cart = props.cart || [];
+
     // Debug logs
-    console.log('=== WorkspaceSection Debug ===');
-    console.log('Total products received:', products.length);
-    console.log('Products:', products);
-    
-    // Filter produk berdasarkan kategori "Coworking Space" dan search term
+    console.log("=== WorkspaceSection Debug ===");
+    console.log("Total products received:", products.length);
+    console.log("Products:", products);
+    console.log("Cart items:", cart.length);
+
+    // Filter produk berdasarkan search term
     const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-        // Filter search saja
-        const matchesSearch = searchTerm === "" || 
-            (product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase()));
-        
-        console.log(`Product: ${product.title}`, {
-            matchesSearch
+        return products.filter((product) => {
+            const matchesSearch =
+                searchTerm === "" ||
+                (product.title &&
+                    product.title
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()));
+
+            return matchesSearch;
         });
-        
-        return matchesSearch; // HANYA CEK SEARCH
-    });
-}, [products, searchTerm]);
+    }, [products, searchTerm]);
+
+    const handleOrderClick = (product) => {
+        console.log("=== handleOrderClick Debug ===");
+        console.log("Product clicked:", product);
+        console.log("Product has variants:", product?.variants);
+        console.log("Product has custom_options:", product?.custom_options);
+        console.log("Product keys:", Object.keys(product));
+
+        setSelectedProduct(product);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedProduct(null);
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-white">
             <Navbar />
-            
+
             {/* Hero Section */}
             <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 text-white overflow-hidden">
                 <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -37,13 +60,32 @@ const WorkspaceSection = ({ products = [] }) => {
                 <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
                 <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000"></div>
 
-                <div className="relative container mx-auto px-4 py-24 text-center">
-                    <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent">
-                        Coworking Space
-                    </h1>
-                    <p className="text-xl mb-8 max-w-2xl mx-auto text-blue-100 leading-relaxed">
-                        Tempat kerja modern dan fleksibel untuk produktivitas maksimal
-                    </p>
+                <div className="relative container mx-auto px-4 py-24">
+                    <div className="flex justify-between items-center mb-8">
+                        <div className="flex-1">
+                            <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent">
+                                Coworking Space
+                            </h1>
+                            <p className="text-xl mb-8 max-w-2xl text-blue-100 leading-relaxed">
+                                Tempat kerja modern dan fleksibel untuk
+                                produktivitas maksimal
+                            </p>
+                        </div>
+
+                        {/* Cart Button */}
+                        <Link
+                            href="/cart"
+                            className="relative bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
+                        >
+                            <ShoppingCart className="w-5 h-5" />
+                            <span className="font-semibold">Keranjang</span>
+                            {cart.length > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                    {cart.length}
+                                </span>
+                            )}
+                        </Link>
+                    </div>
 
                     {/* Search Bar */}
                     <div className="max-w-lg mx-auto relative mb-6">
@@ -63,7 +105,7 @@ const WorkspaceSection = ({ products = [] }) => {
                     </div>
 
                     {/* Info Link */}
-                    <div className="mt-6">
+                    <div className="mt-6 text-center">
                         <a
                             href="#schedule"
                             className="inline-flex items-center gap-2 text-blue-300 hover:text-blue-200 text-sm bg-blue-900/30 px-4 py-2 rounded-full backdrop-blur-sm border border-blue-400/30 hover:bg-blue-800/40 transition-all duration-200"
@@ -83,6 +125,23 @@ const WorkspaceSection = ({ products = [] }) => {
                         </a>
                     </div>
                 </div>
+            </div>
+
+            {/* Category Navigation */}
+            <div className="flex gap-4 mb-6">
+                {categories.map(category => (
+                    <Link
+                        key={category.id}
+                        href={route('workspace', category.slug)}
+                        className={`px-4 py-2 rounded-lg ${
+                            currentCategory?.id === category.id 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                    >
+                        {category.name}
+                    </Link>
+                ))}
             </div>
 
             {/* Products Section */}
@@ -118,21 +177,30 @@ const WorkspaceSection = ({ products = [] }) => {
                                     <div className="relative overflow-hidden">
                                         <img
                                             src={
-                                                product.images && product.images.length > 0
+                                                product.images &&
+                                                product.images.length > 0
                                                     ? `/storage/${product.images[0]}`
                                                     : "/images/placeholder.png"
                                             }
                                             alt={product.title}
                                             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                                             onError={(e) => {
-                                                e.target.src = "/images/placeholder.png";
+                                                e.target.src =
+                                                    "/images/placeholder.png";
                                             }}
                                         />
                                         <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-200/30 to-transparent"></div>
-                                        
+
+                                        {/* Promo Label */}
+                                        {product.promo_label && (
+                                            <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg">
+                                                {product.promo_label}
+                                            </div>
+                                        )}
+
                                         {/* Category Badge */}
                                         {product.category && (
-                                            <div className="absolute top-2 left-2 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-full font-medium">
+                                            <div className="absolute top-2 right-2 bg-blue-600/90 text-white text-xs px-3 py-1 rounded-full font-medium">
                                                 {product.category.name}
                                             </div>
                                         )}
@@ -140,7 +208,7 @@ const WorkspaceSection = ({ products = [] }) => {
 
                                     {/* Product Info */}
                                     <div className="p-5">
-                                        <h3 className="font-semibold text-slate-800 mb-3 line-clamp-2 text-base leading-tight min-h-[48px]">
+                                        <h3 className="font-semibold text-slate-800 mb-2 line-clamp-2 text-base leading-tight min-h-[48px]">
                                             {product.title}
                                         </h3>
 
@@ -157,12 +225,30 @@ const WorkspaceSection = ({ products = [] }) => {
                                                 Mulai dari
                                             </div>
                                             <span className="text-lg font-bold text-blue-900">
-                                                Rp {Number(product.base_price).toLocaleString('id-ID')}
+                                                Rp{" "}
+                                                {Number(
+                                                    product.base_price
+                                                ).toLocaleString("id-ID")}
                                             </span>
+                                            {product.variants &&
+                                                product.variants.length > 0 && (
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {
+                                                            product.variants
+                                                                .length
+                                                        }{" "}
+                                                        paket tersedia
+                                                    </p>
+                                                )}
                                         </div>
 
                                         {/* Order Button */}
-                                        <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2.5 px-4 rounded-lg font-semibold shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+                                        <button
+                                            onClick={() =>
+                                                handleOrderClick(product)
+                                            }
+                                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2.5 px-4 rounded-lg font-semibold shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1"
+                                        >
                                             <span className="flex items-center justify-center gap-2">
                                                 Pesan Sekarang
                                                 <svg
@@ -192,14 +278,17 @@ const WorkspaceSection = ({ products = [] }) => {
                         <div className="text-center py-16">
                             <div className="max-w-md mx-auto">
                                 <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <Search size={32} className="text-blue-500" />
+                                    <Search
+                                        size={32}
+                                        className="text-blue-500"
+                                    />
                                 </div>
                                 <h3 className="text-xl font-semibold text-slate-800 mb-3">
                                     Tidak ada coworking space yang ditemukan
                                 </h3>
                                 <p className="text-blue-600 mb-6">
-                                    {searchTerm 
-                                        ? "Coba gunakan kata kunci yang berbeda" 
+                                    {searchTerm
+                                        ? "Coba gunakan kata kunci yang berbeda"
                                         : "Belum ada coworking space yang tersedia"}
                                 </p>
                                 {searchTerm && (
@@ -217,7 +306,10 @@ const WorkspaceSection = ({ products = [] }) => {
             </div>
 
             {/* Schedule Section */}
-            <div id="schedule" className="flex justify-center items-center p-6 bg-slate-50">
+            <div
+                id="schedule"
+                className="flex justify-center items-center p-6 bg-slate-50"
+            >
                 <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg overflow-hidden">
                     <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3">
                         <h2 className="text-white text-lg font-semibold">
@@ -234,6 +326,13 @@ const WorkspaceSection = ({ products = [] }) => {
 
             {/* Additional Schedule Component */}
             <GoogleSheetsScheduleSection />
+
+            {/* Product Modal */}
+            <ProductModal
+                product={selectedProduct}
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+            />
         </div>
     );
 };

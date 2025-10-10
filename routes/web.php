@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Models\GoogleSheetsConfig;
 use App\Models\Product;
 
@@ -149,30 +150,27 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         ]);
     })->name('google-sheets');
     
-    // Google Sheets API routes (uncomment when controller is created)
-    // Route::post('/google-sheets/test', [GoogleSheetsController::class, 'test']);
-    // Route::post('/google-sheets/store', [GoogleSheetsController::class, 'store']);
-
-    // Categories Management
+    
+    // routes untuk Category ya gess
     Route::resource('categories', CategoryController::class);
     Route::patch('categories/update-order', [CategoryController::class, 'updateOrder'])->name('categories.update-order');
 
-    // Products Management
+    // routes untuk Product ya gess
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
     Route::patch('products/{product}/status', [ProductController::class, 'updateStatus'])->name('products.update-status');
     Route::patch('products/{product}/featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
     Route::delete('products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     
-    // Product Image Management
+    
     Route::post('products/upload-image', [ProductController::class, 'uploadImage'])->name('products.upload-image');
     Route::delete('products/delete-image', [ProductController::class, 'deleteImage'])->name('products.delete-image');
     
-    // Product Export/Import
+    // routes untuk Export/Import produk ya gess
     Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
     Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
 
-    // Other Admin Pages
+    // routes untuk page admin ya gess
     Route::get('settings', function () {
         return Inertia::render('Admin/Settings');
     })->name('settings');
@@ -246,8 +244,8 @@ Route::get('/adminlogin', function () {
 // Cart routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
-Route::delete('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
-Route::patch('/cart/quantity', [CartController::class, 'updateQuantity'])->name('cart.quantity');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/update-quantity', [CartController::class, 'updateQuantity'])->name('cart.updateQuantity');
 
 // Checkout routes
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');

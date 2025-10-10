@@ -8,17 +8,30 @@ export default function CartIndex({ cart = [] }) {
         router.post('/cart/update-quantity', {
             id: itemId,
             quantity: Math.max(1, newQuantity),
+        }, {
+            preserveState: true,
+            preserveScroll: true,
         });
     };
 
     const handleRemove = (itemId) => {
         if (confirm('Hapus produk dari keranjang?')) {
-            router.post('/cart/remove', { id: itemId });
+            router.post('/cart/remove', { 
+                id: itemId 
+            }, {
+                preserveState: true,
+                preserveScroll: true,
+            });
         }
     };
 
     const calculateTotal = () => {
         return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    };
+
+    const handleCheckout = () => {
+        // Redirect ke halaman checkout
+        router.get('/checkout');
     };
 
     return (
@@ -90,9 +103,11 @@ export default function CartIndex({ cart = [] }) {
                                             {item.custom_options && Object.keys(item.custom_options).length > 0 && (
                                                 <div className="text-sm text-slate-600 mt-2 space-y-1">
                                                     {Object.entries(item.custom_options).map(([key, value]) => (
-                                                        <div key={key}>
-                                                            <span className="font-medium">{key}:</span> {value}
-                                                        </div>
+                                                        value && (
+                                                            <div key={key}>
+                                                                <span className="font-medium">{key}:</span> {value}
+                                                            </div>
+                                                        )
                                                     ))}
                                                 </div>
                                             )}
@@ -111,7 +126,8 @@ export default function CartIndex({ cart = [] }) {
                                             <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
                                                 <button
                                                     onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                                    className="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition"
+                                                    disabled={item.quantity <= 1}
+                                                    className="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     <Minus className="w-4 h-4" />
                                                 </button>
@@ -138,6 +154,7 @@ export default function CartIndex({ cart = [] }) {
                                             <button
                                                 onClick={() => handleRemove(item.id)}
                                                 className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition"
+                                                title="Hapus item"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
@@ -167,7 +184,11 @@ export default function CartIndex({ cart = [] }) {
                                     </div>
                                 </div>
 
-                                <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl">
+                                {/* Button Checkout - DIPERBAIKI */}
+                                <button 
+                                    onClick={handleCheckout}
+                                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                                >
                                     Lanjutkan ke Pembayaran
                                 </button>
 

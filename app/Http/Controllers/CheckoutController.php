@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Inertia\Inertia;  // ← Tambahkan ini
+use App\Models\Order;  // ← Tambahkan ini
+use App\Models\OrderItem;  // ← Tambahkan ini
+use Illuminate\Support\Facades\DB;  // ← Tambahkan ini
 
 class CheckoutController extends Controller
 {
-     public function index()
+    public function index()
     {
         $cart = session('cart', []);
         
@@ -18,7 +22,9 @@ class CheckoutController extends Controller
 
         return Inertia::render('Checkout/Index', [
             'cart' => $cart,
-            'subtotal' => $subtotal
+            'subtotal' => $subtotal,
+            'tax' => 0,  // ← Tambahkan ini
+            'total' => $subtotal  // ← Tambahkan ini
         ]);
     }
 
@@ -28,7 +34,6 @@ class CheckoutController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_email' => 'required|email|max:255',
             'customer_phone' => 'required|string|max:20',
-            'country' => 'required|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -47,7 +52,6 @@ class CheckoutController extends Controller
                 'customer_name' => $validated['customer_name'],
                 'customer_email' => $validated['customer_email'],
                 'customer_phone' => $validated['customer_phone'],
-                'country' => $validated['country'],
                 'notes' => $validated['notes'] ?? null,
                 'subtotal' => $subtotal,
                 'total' => $subtotal,
@@ -60,8 +64,8 @@ class CheckoutController extends Controller
                     'product_id' => $item['product_id'],
                     'product_variant_id' => $item['variant_id'] ?? null,
                     'product_name' => $item['product_name'],
-                    'variant_name' => $item['variant_name'],
-                    'custom_options' => $item['custom_options'],
+                    'variant_name' => $item['variant_name'] ?? null,
+                    'custom_options' => $item['custom_options'] ?? [],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
                     'subtotal' => $item['subtotal'],

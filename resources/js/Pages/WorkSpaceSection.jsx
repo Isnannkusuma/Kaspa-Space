@@ -52,11 +52,11 @@ const WorkspaceSection = ({ products = [], currentCategory, categories = [] }) =
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-white">
             <Navbar />
 
-            {/* Hero Section */}
+            
             <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 text-white overflow-hidden">
                 <div className="absolute inset-0 bg-black bg-opacity-30"></div>
 
-                {/* Decorative elements */}
+                
                 <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
                 <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000"></div>
 
@@ -72,7 +72,7 @@ const WorkspaceSection = ({ products = [], currentCategory, categories = [] }) =
                             </p>
                         </div>
 
-                        {/* Cart Button */}
+                        {/* Cart */}
                         <Link
                             href="/cart"
                             className="relative bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"

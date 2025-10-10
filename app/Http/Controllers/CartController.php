@@ -31,7 +31,7 @@ class CartController extends Controller
 
         $cart = session('cart', []);
         
-        // Cek stok jika variant memiliki stock management
+        
         if ($validated['variant_id']) {
             $variant = ProductVariant::find($validated['variant_id']);
             if ($variant->manage_stock && $variant->stock_quantity < $validated['quantity']) {

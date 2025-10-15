@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Inertia\Inertia;  // ← Tambahkan ini
-use App\Models\Order;  // ← Tambahkan ini
-use App\Models\OrderItem;  // ← Tambahkan ini
-use Illuminate\Support\Facades\DB;  // ← Tambahkan ini
+use Inertia\Inertia;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\PaymentSetting;
+use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
 {
@@ -23,8 +24,8 @@ class CheckoutController extends Controller
         return Inertia::render('Checkout/Index', [
             'cart' => $cart,
             'subtotal' => $subtotal,
-            'tax' => 0,  // ← Tambahkan ini
-            'total' => $subtotal  // ← Tambahkan ini
+            'tax' => 0,
+            'total' => $subtotal
         ]);
     }
 
@@ -35,6 +36,7 @@ class CheckoutController extends Controller
             'customer_email' => 'required|email|max:255',
             'customer_phone' => 'required|string|max:20',
             'notes' => 'nullable|string|max:1000',
+            'payment_method' => 'required|in:qris,bank_transfer,cash',
         ]);
 
         $cart = session('cart', []);
@@ -53,6 +55,8 @@ class CheckoutController extends Controller
                 'customer_email' => $validated['customer_email'],
                 'customer_phone' => $validated['customer_phone'],
                 'notes' => $validated['notes'] ?? null,
+                'payment_method' => $validated['payment_method'], // ← Tambahan
+                'payment_status' => 'pending', // ← Tambahan
                 'subtotal' => $subtotal,
                 'total' => $subtotal,
                 'status' => 'pending',
@@ -76,7 +80,8 @@ class CheckoutController extends Controller
 
             session()->forget('cart');
 
-            return redirect()->route('order.success', $order)
+            // Redirect ke halaman pembayaran
+            return redirect()->route('orders.payment', $order)
                 ->with('success', 'Pesanan berhasil dibuat');
 
         } catch (\Exception $e) {

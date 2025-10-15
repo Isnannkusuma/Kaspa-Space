@@ -28,9 +28,9 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
     },
     {
       name: 'Pesanan',
-      href: '/admin/orders',
+      href: '/admin/orders/payments',
       icon: ClipboardDocumentListIcon,
-      current: url.startsWith('/admin/orders')
+      current: url.startsWith('/admin/orders/payments') || url.startsWith('/admin/orders/payment')
     },
     {
       name: 'Produk',

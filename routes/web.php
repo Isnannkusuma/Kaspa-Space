@@ -4,11 +4,17 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\WorkspaceController;
+
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\PaymentSettingsController;
+
 use App\Models\GoogleSheetsConfig;
 use App\Models\Product;
 
@@ -137,6 +143,13 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         return Inertia::render('Admin/LandingAdmin');
     })->name('LandingAdmin');
 
+    // orderan routes
+    Route::get('/orders/payments', [AdminOrderController::class, 'payments'])->name('orders.payments');
+    Route::post('/orders/{order}/verify-payment', [AdminOrderController::class, 'verifyPayment'])->name('admin.orders.verify-payment');
+    
+    Route::get('/orders/paymentsettings', [PaymentSettingsController::class, 'index'])->name('admin.orders.paymentsettings');
+    Route::post('/orders/paymentsettings/qris', [PaymentSettingsController::class, 'updateQris'])->name('admin.orders.paymentsettings.qris');
+    Route::post('/orders/paymentsettings/bank', [PaymentSettingsController::class, 'updateBank'])->name('admin.orders.paymentsettings.bank');
     // Schedule Management Routes
     Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
     Route::post('/schedule/upload', [ScheduleController::class, 'upload'])->name('schedule.upload');
@@ -150,6 +163,10 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         ]);
     })->name('google-sheets');
     
+    Route::get('/test-orders', function () {
+    return \App\Models\Order::all();
+});
+
     
     // routes untuk Category ya gess
     Route::resource('categories', CategoryController::class);
@@ -278,5 +295,15 @@ Route::get('/test-product/{slug}', function ($slug) {
 });
 
 Route::get('/workspace/{category?}', [WorkspaceController::class, 'index'])->name('workspace');
+
+// cutomer routes
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/orders/{order}/payment', [OrderController::class, 'showPayment'])->name('orders.payment');
+Route::post('/orders/{order}/upload-payment', [OrderController::class, 'uploadPayment'])->name('orders.upload-payment');
+Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
+
+
+// payment adnmin routes
+
 
 require __DIR__.'/auth.php';

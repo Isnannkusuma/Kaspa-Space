@@ -11,7 +11,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::ordered()->paginate(15);
+        $categories = Category::withCount('products')->paginate(15);
 
         return Inertia::render('Admin/Categories/Index', [
             'categories' => $categories,
@@ -33,6 +33,10 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
             'sort_order' => 'integer|min:0',
         ]);
+
+        if (empty($validated['slug'])) {
+            $validated['slug'] = \Str::slug($validated['name']);
+        }
 
         Category::create($validated);
 

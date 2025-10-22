@@ -29,6 +29,7 @@ class ProductVariant extends Model
         'manage_stock' => 'boolean',
         'price' => 'decimal:2',
         'compare_price' => 'decimal:2',
+        'sort_order' => 'integer',
     ];
 
     protected static function boot()
@@ -58,6 +59,11 @@ class ProductVariant extends Model
             $q->where('manage_stock', false)
               ->orWhere('stock_quantity', '>', 0);
         });
+    }
+
+    public function orderItems()
+    {
+    return $this->hasMany(OrderItem::class);
     }
 
     public function isInStock()

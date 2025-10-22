@@ -4,14 +4,118 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\ScheduleController;
-use App\Models\GoogleSheetsConfig;
-use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\WorkspaceController;
 
+use App\Http\Controllers\Admin\ScheduleController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\PaymentSettingsController;
+
+use App\Models\GoogleSheetsConfig;
+use App\Models\Product;
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return Inertia::render('LandingPage');
 });
+
+Route::get('/workspace-section', function () {
+    $products = Product::with(['category', 'variants']) // PENTING: Load variants
+        ->where('is_active', 1)
+        ->orderBy('sort_order')
+        ->get()
+        ->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'title' => $product->title,
+                'slug' => $product->slug,
+                'subtitle' => $product->subtitle,
+                'description' => $product->description,
+                'promo_label' => $product->promo_label,
+                'base_price' => (string) $product->base_price,
+                'images' => is_array($product->images) ? $product->images : [],
+                'is_featured' => $product->is_featured,
+                'category' => $product->category ? [
+                    'id' => $product->category->id,
+                    'name' => $product->category->name,
+                    'slug' => $product->category->slug,
+                ] : null,
+                // TAMBAHKAN INI - Variants
+                'variants' => $product->variants->map(function ($variant) {
+                    return [
+                        'id' => $variant->id,
+                        'name' => $variant->name,
+                        'description' => $variant->description ?? null,
+                        'sku' => $variant->sku,
+                        'price' => (float) $variant->price,
+                        'compare_price' => $variant->compare_price ? (float) $variant->compare_price : null,
+                        'is_active' => (bool) $variant->is_active,
+                        'manage_stock' => (bool) $variant->manage_stock,
+                        'stock_quantity' => (int) $variant->stock_quantity,
+                        'sort_order' => (int) $variant->sort_order,
+                        'attributes' => $variant->attributes,
+                        'image' => $variant->image,
+                    ];
+                })->toArray(),
+                // TAMBAHKAN INI - Custom Options
+                'custom_options' => is_array($product->custom_options) 
+                    ? array_map(function($option) {
+                        return [
+                            'name' => $option['question'] ?? $option['name'] ?? '',
+                            'label' => $option['question'] ?? $option['label'] ?? $option['name'] ?? '',
+                            'type' => $option['type'] ?? 'text',
+                            'required' => $option['required'] ?? false,
+                            'placeholder' => $option['placeholder'] ?? null,
+                            'options' => $option['options'] ?? null,
+                        ];
+                    }, $product->custom_options)
+                    : [],
+            ];
+        })->values()->toArray();
+    
+    return Inertia::render('WorkSpaceSection', [
+        'products' => $products
+    ]);
+
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/update-quantity', [CartController::class, 'updateQuantity'])->name('cart.updateQuantity');
+
+})->name('workspace.section');
+Route::get('/jasa-profesional-section', function () {
+    return Inertia::render('JasaProfesionalSection');
+})->name('jasa.profesional.section');
+
+Route::get('/food-beverage', function () {
+    return Inertia::render('FoodBeverage');
+})->name('food.beverage');
+
+// Public Schedule Routes
+Route::get('/jadwal-ruangan', function() {
+    return Inertia::render('Schedule/Index', [
+        'initialData' => \App\Models\Schedule::all(),
+        'googleSheetsConfig' => GoogleSheetsConfig::where('is_active', true)->first(),
+    ]);
+})->name('schedule.index');
+
+// API untuk real-time data
+Route::get('/api/schedule-data', [ScheduleController::class, 'getPublicData']);
+
+/*
+|--------------------------------------------------------------------------
+| Auth Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -23,128 +127,106 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::get('/workspace-section', function () {
-    return Inertia::render('WorkSpaceSection');
-})->name('workspace.section');
-
-Route::get('/jasa-profesional-section', function () {
-    return Inertia::render('JasaProfesionalSection');
-})->name('jasa.profesional.section');
-
-Route::get('/food-beverage', function () {
-    return Inertia::render('FoodBeverage');
-})->name('food.beverage');
-
-Route::get('/ScheduleManagement', function () {
-    return Inertia::render('admin/ScheduleManagement');
-})->name('schedule.management');
-
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-    // Dashboard schedule page
-    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
-    
-    // Upload schedule data
-    Route::post('/schedule/upload', [ScheduleController::class, 'upload'])->name('schedule.upload');
-    
-    // Clear all schedules
-    Route::delete('/schedule/clear', [ScheduleController::class, 'clear'])->name('schedule.clear');
-    
-    // View current data
-    Route::get('/schedule/view', [ScheduleController::class, 'view'])->name('schedule.view');
-});
-
-Route::get('/api/schedule-data', [ScheduleController::class, 'getPublicData']);
-
-// Google API
-Route::middleware(['auth'])->prefix('admin')->group(function () {
-    Route::get('/google-sheets-config', function() {
-        return Inertia::render('admin/GoogleSheetsConfig', [
-            'currentConfig' => GoogleSheetsConfig::first(),
-        ]);
-    })->name('admin.google-sheets');
-    
-    // API routes untuk test dan save
-    Route::post('/google-sheets/test', [GoogleSheetsController::class, 'test']);
-    Route::post('/google-sheets/store', [GoogleSheetsController::class, 'store']);
-});
-
-// Public routes
-Route::get('/jadwal-ruangan', function() {
-    return Inertia::render('Schedule/Index', [
-        'initialData' => Schedule::all(),
-        'googleSheetsConfig' => GoogleSheetsConfig::where('is_active', true)->first(),
-    ]);
-})->name('schedule.index');
-
-// API untuk real-time data
-Route::get('/api/schedule-data', [ScheduleController::class, 'getPublicData']);
-
-
-
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Admin Routes
 |--------------------------------------------------------------------------
 */
+Route::get('/admin/test', function () {
+    return response()->json(['message' => 'Admin route works']);
+})->name('admin.test');
 
-Route::get('/adminlogin', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
-
-// Admin Routes - Protected by authentication
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     
     // Dashboard
-    Route::get('/adminlogin', function () {
-        return Inertia::render('Admin/Dashboard');
-    })->name('dashboard');
+    Route::get('/adminlayout', function () {
+        return Inertia::render('Admin/LandingAdmin');
+    })->name('LandingAdmin');
 
-    // Categories Management
+    // orderan routes
+    Route::get('/orders/payments', [AdminOrderController::class, 'payments'])->name('orders.payments');
+    Route::post('/orders/{order}/verify-payment', [AdminOrderController::class, 'verifyPayment'])->name('admin.orders.verify-payment');
+    
+    Route::get('/orders/paymentsettings', [PaymentSettingsController::class, 'index'])->name('admin.orders.paymentsettings');
+    Route::post('/orders/paymentsettings/qris', [PaymentSettingsController::class, 'updateQris'])->name('admin.orders.paymentsettings.qris');
+    Route::post('/orders/paymentsettings/bank', [PaymentSettingsController::class, 'updateBank'])->name('admin.orders.paymentsettings.bank');
+    // Schedule Management Routes
+    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
+    Route::post('/schedule/upload', [ScheduleController::class, 'upload'])->name('schedule.upload');
+    Route::delete('/schedule/clear', [ScheduleController::class, 'clear'])->name('schedule.clear');
+    Route::get('/schedule/view', [ScheduleController::class, 'view'])->name('schedule.view');
+
+    // Google Sheets Configuration
+    Route::get('/google-sheets-config', function() {
+        return Inertia::render('Admin/GoogleSheetsConfig', [
+            'currentConfig' => GoogleSheetsConfig::first(),
+        ]);
+    })->name('google-sheets');
+    
+    Route::get('/test-orders', function () {
+    return \App\Models\Order::all();
+});
+
+    
+    // routes untuk Category ya gess
     Route::resource('categories', CategoryController::class);
     Route::patch('categories/update-order', [CategoryController::class, 'updateOrder'])->name('categories.update-order');
 
-    // Products Management
+    // routes untuk Product ya gess
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
     Route::patch('products/{product}/status', [ProductController::class, 'updateStatus'])->name('products.update-status');
+    Route::patch('products/{product}/featured', [ProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
     Route::delete('products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     
-    // Product Image Management
+    
     Route::post('products/upload-image', [ProductController::class, 'uploadImage'])->name('products.upload-image');
     Route::delete('products/delete-image', [ProductController::class, 'deleteImage'])->name('products.delete-image');
+    
+    // routes untuk Export/Import produk ya gess
+    Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
 
-    // Settings
+    // routes untuk page admin ya gess
     Route::get('settings', function () {
         return Inertia::render('Admin/Settings');
     })->name('settings');
 
-    // Statistics
     Route::get('statistics', function () {
         return Inertia::render('Admin/Statistics');
     })->name('statistics');
 
-    // Reservations (if needed)
     Route::get('reservations', function () {
         return Inertia::render('Admin/Reservations');
     })->name('reservations');
 
-    // Discounts (if needed)
     Route::get('discounts', function () {
         return Inertia::render('Admin/Discounts');
     })->name('discounts');
 
-    // Integrations (if needed)
     Route::get('integrations', function () {
         return Inertia::render('Admin/Integrations');
     })->name('integrations');
 });
 
-// Public Frontend Routes
+/*
+|--------------------------------------------------------------------------
+| Schedule Management Route (Legacy)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/ScheduleManagement', function () {
+    return Inertia::render('Admin/ScheduleManagement');
+})->name('schedule.management');
+
+/*
+|--------------------------------------------------------------------------
+| Public Frontend Routes (E-commerce)
+|--------------------------------------------------------------------------
+| Uncomment when controllers are created
+*/
+
+
 Route::middleware(['web'])->group(function () {
     // Product catalog
     Route::get('/products', [\App\Http\Controllers\ProductController::class, 'index'])->name('products.index');
@@ -156,5 +238,72 @@ Route::middleware(['web'])->group(function () {
     Route::get('/cart', [\App\Http\Controllers\CartController::class, 'index'])->name('cart.index');
     Route::post('/checkout', [\App\Http\Controllers\CheckoutController::class, 'process'])->name('checkout.process');
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Login Page Route
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/adminlogin', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+})->name('admin.login.page');
+
+
+// checkout
+
+// Cart routes
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/update-quantity', [CartController::class, 'updateQuantity'])->name('cart.updateQuantity');
+
+// Checkout routes
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/order/success/{order}', [CheckoutController::class, 'success'])->name('order.success');
+
+// Admin routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
+});
+
+Route::get('/test-product/{slug}', function ($slug) {
+    $product = \App\Models\Product::with(['variants'])
+        ->where('slug', $slug)
+        ->firstOrFail();
+    
+    return response()->json([
+        'id' => $product->id,
+        'title' => $product->title,
+        'variants_loaded' => $product->relationLoaded('variants'),
+        'variants_count' => $product->variants->count(),
+        'variants' => $product->variants->toArray(),
+        'custom_options_type' => gettype($product->custom_options),
+        'custom_options' => $product->custom_options,
+        'images_type' => gettype($product->images),
+        'images' => $product->images,
+    ]);
+});
+
+Route::get('/workspace/{category?}', [WorkspaceController::class, 'index'])->name('workspace');
+
+// cutomer routes
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/orders/{order}/payment', [CheckoutController::class, 'payment'])->name('orders.payment');
+Route::post('/orders/{order}/upload-payment', [OrderController::class, 'uploadPayment'])->name('orders.upload-payment');
+Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
+
+
+// payment adnmin routes
+
 
 require __DIR__.'/auth.php';

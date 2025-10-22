@@ -60,98 +60,130 @@ class ProductController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'subtitle' => 'nullable|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug',
-            'description' => 'nullable|string',
-            'promo_label' => 'nullable|string|max:100',
-            'base_price' => 'required|numeric|min:0',
-            'category_id' => 'required|exists:categories,id',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'sort_order' => 'integer|min:0',
-            'meta_description' => 'nullable|string|max:160',
-            'meta_keywords' => 'nullable|string|max:255',
-            
-            // Images
-            'images' => 'nullable|array|max:6',
-            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
-            
-            // Custom options
-            'custom_options' => 'nullable|array',
-            'custom_options.*.question' => 'required|string',
-            'custom_options.*.type' => 'required|in:checkbox,radio,select,text',
-            'custom_options.*.options' => 'nullable|array',
-            'custom_options.*.required' => 'boolean',
-            
-            // Variants
-            'variants' => 'nullable|array',
-            'variants.*.name' => 'required|string|max:255',
-            'variants.*.price' => 'required|numeric|min:0',
-            'variants.*.compare_price' => 'nullable|numeric|min:0',
-            'variants.*.attributes' => 'nullable|array',
-            'variants.*.stock_quantity' => 'integer|min:0',
-            'variants.*.manage_stock' => 'boolean',
-            
-            // Recommendations
-            'recommendations' => 'nullable|array',
-            'recommendations.*' => 'exists:products,id',
-        ]);
+{
+    \Log::info('Product store request', $request->all());
 
-        DB::beginTransaction();
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'subtitle' => 'nullable|string|max:255',
+        'description' => 'nullable|string',
+        'promo_label' => 'nullable|string|max:100',
+        'base_price' => 'required|numeric|min:0',
+        'category_id' => 'required|exists:categories,id',
+        'is_active' => 'boolean',
+        'is_featured' => 'boolean',
+        'sort_order' => 'nullable|integer|min:0',
+        'meta_description' => 'nullable|string|max:160',
+        'meta_keywords' => 'nullable|string|max:255',
+        
+        // Images
+        'images' => 'nullable|array|max:6',
+        'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
+        
+        // Custom options
+        'custom_options' => 'nullable|array',
+        'custom_options.*.question' => 'required|string',
+        'custom_options.*.type' => 'required|in:checkbox,radio,select,text',
+        'custom_options.*.options' => 'nullable|array',
+        'custom_options.*.required' => 'boolean',
+        
+        // Variants
+        'variants' => 'nullable|array',
+        'variants.*.name' => 'required|string|max:255',
+        'variants.*.price' => 'required|numeric|min:0',
+        'variants.*.compare_price' => 'nullable|numeric|min:0',
+        'variants.*.attributes' => 'nullable|array',
+        'variants.*.stock_quantity' => 'nullable|integer|min:0',
+        'variants.*.manage_stock' => 'nullable|boolean',
+        'variants.*.sku' => 'nullable|string|max:100',
+        
+        // Recommendations
+        'recommendations' => 'nullable|array',
+        'recommendations.*' => 'exists:products,id',
+    ]);
 
-        try {
-            // Handle image uploads
-            $imagePaths = [];
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
-                    $path = $image->store('products', 'public');
-                    $imagePaths[] = $path;
-                }
+    DB::beginTransaction();
+
+    try {
+        // Handle image uploads
+        $imagePaths = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('products', 'public');
+                $imagePaths[] = $path;
             }
-            $validated['images'] = $imagePaths;
-
-            // Create product
-            $product = Product::create($validated);
-
-            // Create variants if provided
-            if (!empty($validated['variants'])) {
-                foreach ($validated['variants'] as $variantData) {
-                    $variant = new ProductVariant($variantData);
-                    $variant->product_id = $product->id;
-                    $variant->save();
-                }
-            }
-
-            // Create recommendations if provided
-            if (!empty($validated['recommendations'])) {
-                foreach ($validated['recommendations'] as $index => $recommendedProductId) {
-                    ProductRecommendation::create([
-                        'product_id' => $product->id,
-                        'recommended_product_id' => $recommendedProductId,
-                        'sort_order' => $index,
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            return redirect()->route('admin.products.index')
-                ->with('success', 'Produk berhasil ditambahkan.');
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            
-            // Delete uploaded images if transaction fails
-            foreach ($imagePaths as $path) {
-                Storage::disk('public')->delete($path);
-            }
-
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat menyimpan produk.']);
         }
+        
+        // Prepare product data
+        $productData = [
+            'title' => $validated['title'],
+            'subtitle' => $validated['subtitle'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'promo_label' => $validated['promo_label'] ?? null,
+            'base_price' => $validated['base_price'],
+            'category_id' => $validated['category_id'],
+            'is_active' => $validated['is_active'] ?? true,
+            'is_featured' => $validated['is_featured'] ?? false,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'meta_description' => $validated['meta_description'] ?? null,
+            'meta_keywords' => $validated['meta_keywords'] ?? null,
+            'images' => $imagePaths,
+            'custom_options' => $validated['custom_options'] ?? null,
+        ];
+
+        // Let the model handle slug generation in boot method
+        // Don't set slug here unless you want to override it
+        
+        \Log::info('Creating product with data', $productData);
+        
+        // Create product
+        $product = Product::create($productData);
+
+        \Log::info('Product created', ['id' => $product->id]);
+
+        // Create variants if provided
+        if (!empty($validated['variants'])) {
+            foreach ($validated['variants'] as $variantData) {
+                $variantData['product_id'] = $product->id;
+                ProductVariant::create($variantData);
+            }
+        }
+
+        // Create recommendations if provided
+        if (!empty($validated['recommendations'])) {
+            foreach ($validated['recommendations'] as $index => $recommendedProductId) {
+                ProductRecommendation::create([
+                    'product_id' => $product->id,
+                    'recommended_product_id' => $recommendedProductId,
+                    'sort_order' => $index,
+                ]);
+            }
+        }
+
+        DB::commit();
+        
+        \Log::info('Product saved successfully', ['id' => $product->id]);
+
+        return redirect()->route('admin.products.index')
+            ->with('success', 'Produk berhasil ditambahkan.');
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        
+        \Log::error('Error creating product', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        // Delete uploaded images if transaction fails
+        foreach ($imagePaths as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat menyimpan produk: ' . $e->getMessage()])
+                    ->withInput();
     }
+}
 
     public function show(Product $product)
     {
@@ -296,6 +328,8 @@ class ProductController extends Controller
             }
 
             DB::commit();
+
+            \Log::info('Product saved', ['id' => $product->id]);
 
             return redirect()->route('admin.products.index')
                 ->with('success', 'Produk berhasil diperbarui.');

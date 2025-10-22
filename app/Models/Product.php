@@ -19,7 +19,7 @@ class Product extends Model
         'base_price',
         'images',
         'custom_options',
-        'is_active',
+        'is_active',    
         'is_featured',
         'sort_order',
         'meta_description',
@@ -28,11 +28,12 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'images' => 'json',
-        'custom_options' => 'json',
+        'images' => 'array',
+        'custom_options' => 'array',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'base_price' => 'decimal:2',
+        'sort_order' => 'integer', // TAMBAHKAN INI
     ];
 
     protected static function boot()
@@ -59,12 +60,19 @@ class Product extends Model
 
     public function variants()
     {
-        return $this->hasMany(ProductVariant::class);
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order'); // TAMBAHKAN orderBy
     }
 
     public function activeVariants()
     {
-        return $this->hasMany(ProductVariant::class)->where('is_active', true)->orderBy('sort_order');
+        return $this->hasMany(ProductVariant::class)
+            ->where('is_active', true)
+            ->orderBy('sort_order');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function recommendations()
@@ -75,8 +83,8 @@ class Product extends Model
     public function recommendedProducts()
     {
         return $this->belongsToMany(Product::class, 'product_recommendations', 'product_id', 'recommended_product_id')
-                   ->withPivot('title', 'sort_order')
-                   ->orderByPivot('sort_order');
+            ->withPivot('title', 'sort_order')
+            ->orderByPivot('sort_order');
     }
 
     public function getRouteKeyName()

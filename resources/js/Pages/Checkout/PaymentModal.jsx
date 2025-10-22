@@ -1,18 +1,19 @@
+import React from 'react';
 import { QrCode, Building2, X } from 'lucide-react';
 
 export default function PaymentModal({ 
     isOpen, 
     onClose, 
     paymentMethod, 
-    paymentSettings, 
+    paymentSettings = {}, 
     total 
 }) {
     if (!isOpen) return null;
 
-    const handleCopyAccountNumber = () => {
-        navigator.clipboard.writeText(paymentSettings.account_number);
-        alert('Nomor rekening berhasil disalin!');
-    };
+    console.log('PaymentModal props:', { paymentMethod, paymentSettings });
+
+    // safe URL check
+    const qrisUrl = paymentSettings?.qris_image || null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -57,11 +58,12 @@ export default function PaymentModal({
                             {/* QR Code Display */}
                             <div className="mb-6">
                                 <div className="bg-gray-50 p-6 rounded-xl border-2 border-gray-200">
-                                    {paymentSettings.qris_image ? (
+                                    {qrisUrl ? (
                                         <img
-                                            src={paymentSettings.qris_image}
+                                            src={qrisUrl}
                                             alt="QRIS Code"
                                             className="w-full max-w-xs mx-auto object-contain"
+                                            onError={(e) => { e.target.src = '/images/placeholder.png'; }}
                                         />
                                     ) : (
                                         <div className="w-64 h-64 mx-auto bg-gray-200 rounded-lg flex items-center justify-center">

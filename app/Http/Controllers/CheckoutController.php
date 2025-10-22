@@ -6,8 +6,9 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\PaymentSetting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use App\Models\PaymentSetting;
 
 class CheckoutController extends Controller
 {
@@ -23,6 +24,11 @@ class CheckoutController extends Controller
     
     // Ambil payment settings dari database
     $paymentSettings = PaymentSetting::first();
+
+    // Pastikan qris_image menjadi URL publik
+    if ($paymentSettings && $paymentSettings->qris_image) {
+        $paymentSettings->qris_image = Storage::url($paymentSettings->qris_image);
+    }
 
     return Inertia::render('Checkout/Index', [
         'cart' => $cart,

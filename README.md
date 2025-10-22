@@ -1,4 +1,4 @@
-Berikut draft `README.md` untuk repositori **Kaspa‑Space** – silakan disesuaikan bila ada elemen khusus yang belum tercantum:
+Berikut draft `README.md` untuk repositori **Kaspa‑Space** :
 
 ---
 

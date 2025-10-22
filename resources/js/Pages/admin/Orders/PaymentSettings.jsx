@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
+import AdminLayout from '../LandingAdmin';
 import { 
     QrCode, 
     Building2, 
@@ -117,7 +118,9 @@ export default function AdminPaymentSettings({
     };
 
     return (
-        <div className="p-6">
+        <AdminLayout title="Pengaturan Pembayaran">
+        
+        <div className="p-6">   
             {/* Header */}
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Pengaturan Pembayaran</h1>
@@ -418,5 +421,6 @@ export default function AdminPaymentSettings({
                 </div>
             </div>
         </div>
+        </AdminLayout>
     );
 }

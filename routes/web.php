@@ -298,7 +298,7 @@ Route::get('/workspace/{category?}', [WorkspaceController::class, 'index'])->nam
 
 // cutomer routes
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
-Route::get('/orders/{order}/payment', [OrderController::class, 'showPayment'])->name('orders.payment');
+Route::get('/orders/{order}/payment', [CheckoutController::class, 'payment'])->name('orders.payment');
 Route::post('/orders/{order}/upload-payment', [OrderController::class, 'uploadPayment'])->name('orders.upload-payment');
 Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
 

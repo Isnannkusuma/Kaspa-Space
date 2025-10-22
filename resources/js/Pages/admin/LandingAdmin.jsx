@@ -75,9 +75,9 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
     },
     {
       name: 'Pengaturan',
-      href: '/admin/settings',
+      href: '/admin/orders/paymentsettings',
       icon: CogIcon,
-      current: url.startsWith('/admin/settings')
+      current: url.startsWith('/admin/orders/payments')
     }
   ];
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
+import AdminLayout from '../LandingAdmin';
 import { 
     Search, 
     CheckCircle, 
@@ -168,6 +169,7 @@ export default function AdminPaymentVerification({
     };
 
     return (
+        <AdminLayout title="Verifikasi Pembayaran">
         <div className="p-6">
             {/* Header */}
             <div className="mb-6">
@@ -458,5 +460,6 @@ export default function AdminPaymentVerification({
                 </div>
             )}
         </div>
+        </AdminLayout>
     );
 }

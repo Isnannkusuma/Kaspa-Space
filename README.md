@@ -54,6 +54,8 @@ Pastikan database yang ditetapkan di `.env` telah ada. Kemudian jalankan:
 php artisan migrate
 # Jika ada seed data tersedia:
 php artisan db:seed
+
+FIle database bernama kaspa_space(1)
 ```
 
 ### 6. Install dependensi Front-end & Build aset
